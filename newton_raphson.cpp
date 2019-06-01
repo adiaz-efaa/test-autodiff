@@ -14,7 +14,7 @@ using namespace autodiff;
 
 typedef std::function<var(var, var)> varvar2var;
 
-var newtonRaphson2(varvar2var f, var solution, const var& parameter, const var& epsilon)
+var newtonRaphson2(varvar2var f, const var& solution, const var& parameter, const var& epsilon)
 {
     var error = 10.0 * val(epsilon);
     var fx;
@@ -22,6 +22,11 @@ var newtonRaphson2(varvar2var f, var solution, const var& parameter, const var& 
     Derivatives dfd;
     std::vector<var> solutions;
     int i = 0;
+
+    // En este vector se guarda la sucesión de soluciones.
+    // Se debe hacer de esta manera porque si se muta el valor de la
+    // solución anterior, la variable dfdx (línea 34) se contamina y
+    // en la segunda iteración se hace igual a cero.
     solutions.push_back(solution);
     while (error > epsilon)
     {
@@ -30,7 +35,7 @@ var newtonRaphson2(varvar2var f, var solution, const var& parameter, const var& 
         dfdx = dfd(solutions[i]);
         if (dfdx == 0.0)
         {
-            std::cout << "derivada 0" << std::endl;
+            std::cout << "Derivada = 0" << std::endl;
             break;
         }
         solutions.push_back(solutions[i]- fx / dfdx);
