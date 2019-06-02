@@ -19,3 +19,10 @@ Se calcula la derivada de una solución obtenida con el método de Newton-Raphso
 de un depósito a 6M menos el valor del nominal. El objetivo es dar el primer paso para un algoritmo de Bootstrapping que
 junto con la curva devuelva las derivadas de las tasas cero respecto a los inputs utilzados (familia de swaps y tasas cero iniciales).
 
+### 3 Bootstrapping
+Se agrega un tercer target que realiza un mini
+bootstrapping con 1 bono a 1Y y un bono a 2Y, 
+ambos con periodicidad anual. La gracia de este bootstrapping
+es que, además de la solución, se obtiene la derivada de la
+solución respecto a la tasa del bono.
+
