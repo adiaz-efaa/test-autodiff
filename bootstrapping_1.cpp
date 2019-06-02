@@ -39,6 +39,13 @@ Bond makeBond(size_t num, double nominal, double periodicity, const var& rate)
     return result;
 }
 
+void showBond(const Bond& bond)
+{
+    for (const auto& cashflow: bond)
+    {
+        std::cout << cashflow.timeToMaturity << ", " << cashflow.amount << std::endl;
+    }
+}
 
 struct ZeroRate
 {
@@ -70,7 +77,7 @@ public:
         }
         auto previous = std::prev(it);
         var result = previous->value +
-                     (t - it->timeToMaturity) / (it->timeToMaturity - previous->timeToMaturity) *
+                     (t - previous->timeToMaturity) / (it->timeToMaturity - previous->timeToMaturity) *
                      (it->value - previous->value);
         return result;
     }
@@ -83,7 +90,9 @@ var presentValue(const Bond& bond, const Curve& crv, const LinInterpol& interpol
     for (const auto& cashflow: bond)
     {
         auto tMat = cashflow.timeToMaturity;
-        result += cashflow.amount / pow(1 + interpolator(tMat, crv), tMat);
+        auto rate = interpolator(tMat, crv);
+        // std::cout << "interpolated rate: " << rate << std::endl;
+        result += cashflow.amount / pow(1 + rate, tMat);
     }
     return result;
 }
@@ -100,24 +109,29 @@ Curve changeRateAt(size_t index, const var& value,  const Curve& curve)
 
 int main()
 {
-    var rate1 = var(.03);
-    auto bond1 = makeBond(1, 100, 1, rate1);
+    double periodicity = 1.0;
+    var rate1 = var(.0301);
+    auto bond1 = makeBond(1, 100, periodicity, rate1);
+    //showBond(bond1);
     var rate2 = var(.035);
-    auto bond2 = makeBond(2, 100, 1, rate2);
+    auto bond2 = makeBond(2, 100, periodicity, rate2);
+    //showBond(bond2);
 
     Curve crv;
     crv.push_back(ZeroRate(1.0, var(.01)));
     crv.push_back(ZeroRate(2.0, var(.02)));
-
     auto linInterpol = LinInterpol {};
 
-    auto epsilon = var(.0001);
-    auto obj1 = [crv, linInterpol](var discountRate, var bondRate){
+    auto pv2 = presentValue(bond2, crv, linInterpol);
+
+
+    auto epsilon = var(.00000001);
+    auto obj1 = [periodicity, crv, linInterpol](var discountRate, var bondRate){
         auto newCrv = changeRateAt(0, discountRate, crv);
-        auto bond = makeBond(1, 100.0, 1, bondRate);
+        auto bond = makeBond(1, 100.0, periodicity, bondRate);
         return presentValue(bond, newCrv , linInterpol) - 100.0;
     };
-    auto solution1 = var(.01);
+    auto solution1 = rate1;
     auto newZ1 = newtonRaphson2(obj1, solution1, rate1, epsilon);
     auto crv1 = changeRateAt(0, newZ1, crv);
 
@@ -126,45 +140,16 @@ int main()
     std::cout << "La solución es: " << newZ1 << std::endl;
     std::cout << "La derivada dnewZ1/drate1: " << dnewZ1d(rate1) << std::endl;
 
-    auto obj2 = [crv1, linInterpol](var discountRate, var bondRate){
+    auto obj2 = [periodicity, crv1, linInterpol](var discountRate, var bondRate){
         auto newCrv = changeRateAt(1, discountRate, crv1);
-        auto bond = makeBond(2, 100.0, 1, bondRate);
+        auto bond = makeBond(2, 100.0, periodicity, bondRate);
         return presentValue(bond, newCrv , linInterpol) - 100.0;
     };
-    auto solution2 = var(.01);
-    auto newZ2 = newtonRaphson2(obj1, solution2, rate2, epsilon);
-    auto crv2 = changeRateAt(0, newZ2, crv);
+    auto solution2 = rate2;
+    auto newZ2 = newtonRaphson2(obj2, solution2, rate2, epsilon);
+    auto crv2 = changeRateAt(1, newZ2, crv1);
     std::cout << std::endl << "bond2: " << presentValue(bond2, crv2, linInterpol) << std::endl;
     Derivatives dnewZ2d = derivatives(newZ2);
     std::cout << "La solución es: " << newZ2 << std::endl;
     std::cout << "La derivada dnewZ2/drate2: " << dnewZ2d(rate2) << std::endl;
-
-
 }
-
-/*
-std::cout << std::endl << "Función obj1" << std::endl;
-auto dRate = var(.01);
-auto bRate = var(.03);
-std::cout << dRate << ", " << obj1(dRate, bRate) << std::endl;
-*/
-
-/*
-std::cout << "Curva" << std::endl;
-for (const auto& z: crv)
-{
-std::cout << z.timeToMaturity << ", " << z.value << std::endl;
-}
-*/
-
-/*
-auto newCrv = changeRateAt(0, var(.02), crv);
-std::cout << std::endl << "Nueva Curva" << std::endl;
-for (const auto& z: newCrv)
-{
-std::cout << z.timeToMaturity << ", " << z.value << std::endl;
-}
-std::cout << "bond1: " << presentValue(bond1, crv, linInterpol) << std::endl;
-std::cout << "bond2: " << presentValue(bond2, crv, linInterpol) << std::endl;
-*/
-
