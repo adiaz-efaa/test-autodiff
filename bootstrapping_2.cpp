@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <iomanip>
 #include <functional>
 #include <vector>
 #include <map>
@@ -40,9 +41,9 @@ int main()
             {20, nominal, periodicity, var(.03555)},
             {24, nominal, periodicity, var(.03625)},
             {30, nominal, periodicity, var(.0367)},
-            {40, nominal, periodicity, var(.0375)}
+            {40, nominal, periodicity, var(.0376)}
 //            {50, nominal, periodicity, var(.03845)},
-//            {60, nominal, periodicity, var(.0389)}
+//            {60, nominal, periodicity, var(.0388)}
     };
     Curve crv;
     for (const auto& info: bondInfo)
@@ -55,6 +56,7 @@ int main()
     int i = 0;
     std::vector<Curve> curves;
     curves.push_back(crv);
+    auto initialGuess = .01;
     for (const auto& info: bondInfo)
     {
         auto obj = [info, curves, linInterpol, i]
@@ -63,7 +65,15 @@ int main()
             auto bond = makeBond2(info);
             return presentValue(bond, newCrv, linInterpol) - info.nominal;
         };
-        auto solution = info.rate;
+        var solution;
+        if (i > 6)
+        {
+           solution = info.rate;
+        }
+        else
+        {
+            solution = var(initialGuess);
+        }
         std::vector<var> bondRates;
         for (const auto& bond: bondInfo)
         {
@@ -71,12 +81,16 @@ int main()
         }
         auto newZ = newtonRaphson3(obj, solution, bondRates, epsilon);
         Derivatives dnewZd = derivatives(newZ);
-        std::cout << dnewZd(bondRates[i]) << std::endl;
-        auto newCrv = changeRateAt(i, newZ, curves[i]);
-        for (size_t j = 0; j <= i; ++j)
+        for (const auto& rate: bondRates)
         {
-            newCrv = changeRateAt(j, var(newCrv[j].value.expr->val), newCrv);
+            std::cout << std::setprecision(10) << dnewZd(rate) << std::endl;
         }
+        //std::cout << dnewZd(bondRates[i]) << std::endl;
+        auto newCrv = changeRateAt(i, newZ, curves[i]);
+            for (size_t j = 0; j <= i; ++j)
+            {
+                newCrv = changeRateAt(j, var(newCrv[j].value.expr->val), newCrv);
+            }
         curves.push_back(newCrv);
         std::cout << std::endl;
         ++i;

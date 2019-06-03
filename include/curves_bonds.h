@@ -100,7 +100,7 @@ var presentValue(const Bond& bond, const Curve& crv, const LinInterpol& interpol
         auto tMat = cashflow.timeToMaturity;
         auto rate = interpolator(tMat, crv);
         // std::cout << "interpolated rate: " << rate << std::endl;
-        result += cashflow.amount / (1 + rate * tMat);
+        result += cashflow.amount / pow(1 + rate, tMat);
     }
     return result;
 }
